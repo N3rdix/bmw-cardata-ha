@@ -553,10 +553,11 @@ class CardataVehicleMetadataSensor(CardataEntity, SensorEntity):
     _attr_entity_category = EntityCategory.DIAGNOSTIC
     _attr_icon = "mdi:car-info"
 
-    def __init__(self, coordinator: CardataCoordinator, vin: str) -> None:
+    def __init__(self, coordinator: CardataCoordinator, vin: str, entry_id: str) -> None:
         super().__init__(coordinator, vin, "diagnostics_vehicle_metadata")
         self._base_name = "Vehicle Metadata"
         self._update_name(write_state=False)
+        self._attr_unique_id = f"{entry_id}_{vin}_diagnostics_vehicle_metadata"
         self._unsubscribe = None
 
     async def async_added_to_hass(self) -> None:
@@ -838,7 +839,7 @@ async def async_setup_entry(
             new_entities.append(soc_rate_entities[vin])
 
         if vin not in metadata_entities:
-            metadata_entities[vin] = CardataVehicleMetadataSensor(coordinator, vin)
+            metadata_entities[vin] = CardataVehicleMetadataSensor(coordinator, vin, entry.entry_id)
             new_entities.append(metadata_entities[vin])
 
         if new_entities:
@@ -933,9 +934,9 @@ async def async_setup_entry(
     )
 
     # add all metadata into metadata to reduce bloat
-    metadata_entities: dict[str, CardataVehicleMetadataSensor] = {}
+    metadata_list: list[CardataVehicleMetadataSensor] = []
     for vin in coordinator.data.keys():
-        unique_id = f"{vin}_diagnostics_vehicle_metadata"
+        unique_id = f"{entry.entry_id}_{vin}_diagnostics_vehicle_metadata"
         
         entity_id = entity_registry.async_get_entity_id("sensor", DOMAIN, unique_id)
         if entity_id:
@@ -946,10 +947,10 @@ async def async_setup_entry(
             if existing_state and not existing_state.attributes.get("restored", False):
                 continue
         
-        metadata_entities.append(CardataVehicleMetadataSensor(coordinator, vin))
+        metadata_list.append(CardataVehicleMetadataSensor(coordinator, vin, entry.entry_id))
 
-    if metadata_entities:
-        async_add_entities(metadata_entities, True)
+    if metadata_list:
+        async_add_entities(metadata_list, True)
     
     # Add diagnostic sensors
     diagnostic_entities: list[CardataDiagnosticsSensor] = []
