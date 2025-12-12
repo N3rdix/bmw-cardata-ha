@@ -488,11 +488,12 @@ class CardataVehicleMetadataSensor(SensorEntity, RestoreEntity):
         self,
         coordinator: CardataCoordinator,
         vin: str,
+        entry_id: str,
     ) -> None:
         self._coordinator = coordinator
         self._vin = vin
         self._attr_name = "Vehicle Metadata"
-        self._attr_unique_id = f"{vin}_diagnostics_vehicle_metadata"
+        self._attr_unique_id = f"{entry_id}_{vin}_diagnostics_vehicle_metadata"
         self._unsub = None
 
     @property
@@ -934,7 +935,7 @@ async def async_setup_entry(
     )
 
     # add all metadata into metadata to reduce bloat
-    metadata_list: list[CardataVehicleMetadataSensor] = []
+    metadata_entities: dict[str, CardataVehicleMetadataSensor] = {}
     for vin in coordinator.data.keys():
         unique_id = f"{entry.entry_id}_{vin}_diagnostics_vehicle_metadata"
         
@@ -947,10 +948,10 @@ async def async_setup_entry(
             if existing_state and not existing_state.attributes.get("restored", False):
                 continue
         
-        metadata_list.append(CardataVehicleMetadataSensor(coordinator, vin, entry.entry_id))
+        metadata_entities.append(CardataVehicleMetadataSensor(coordinator, vin, entry.entry_id))
 
-    if metadata_list:
-        async_add_entities(metadata_list, True)
+    if metadata_entities:
+        async_add_entities(metadata_entities, True)
     
     # Add diagnostic sensors
     diagnostic_entities: list[CardataDiagnosticsSensor] = []
